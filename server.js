@@ -33,12 +33,15 @@ const scrapeWebsite = async (url) => {
             let href = test.attr("href")
             let date = $(el).find("td.fb-d")
             if (test.html() != null && href != "..") {
-                // Send row data to all connected clients
-                io.emit("scrapedRow", {
+                let scrappedRow = {
+                    id:i,
                     label: test.html(),
                     link: href,
                     date: date.text()
-                });
+                }
+                // Send row data to all connected clients
+                io.emit("scrapedRow", scrappedRow);
+                // console.log(i,scrappedRow);
             }
         })
     } catch (error) {
@@ -52,7 +55,7 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         console.log('user disconnected');
     });
-    socket.on('scrape', (url) => {
+    socket.on('scrap', (url) => {
         console.log('scraping', url);
         scrapeWebsite(url);
     });
