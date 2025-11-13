@@ -24,6 +24,7 @@ const scrapeWebsite = async (url) => {
     try {
         // Fetch the HTML from the URL
         const { data: html } = await axios.get(url);
+        io.emit("scrapeStarted", { message: "Scraping started" });
         curUrl = new URL(url)
         const $ = cheerio.load(html);
 
@@ -44,8 +45,10 @@ const scrapeWebsite = async (url) => {
                 // console.log(i,scrappedRow);
             }
         })
+        io.emit("scrapeCompleted", { message: "Scraping completed" });
     } catch (error) {
         console.error('Error scraping:', error.message);
+        io.emit("scrapeError", { message: "Error occurred during scraping" });
     }
 };
 
