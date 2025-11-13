@@ -35,7 +35,7 @@ const scrapeWebsite = async (url) => {
             if (test.html() != null && href != "..") {
                 let scrappedRow = {
                     id:i,
-                    label: test.html(),
+                    title: test.html(),
                     link: href,
                     date: date.text()
                 }
