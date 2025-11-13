@@ -19,13 +19,20 @@ const io = new Server(server, {
 app.use(cors());
 
 
-var curUrl;
+let scrapeParentLink = 'http://172.16.50.14';
 const scrapeWebsite = async (url) => {
     try {
         // Fetch the HTML from the URL
-        const { data: html } = await axios.get(url);
+        let currentUrl = ""+url;
+        if(!currentUrl.includes("http")){
+            if(currentUrl.startsWith("/")){
+                currentUrl = scrapeParentLink + currentUrl;
+            }else{
+                currentUrl = scrapeParentLink + "/" + currentUrl;
+            }
+        }
+        const { data: html } = await axios.get(currentUrl);
         io.emit("scrapeStarted", { message: "Scraping started" });
-        curUrl = new URL(url)
         const $ = cheerio.load(html);
 
         let body = $("html").find("tr")
