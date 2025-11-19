@@ -13,7 +13,7 @@ CREATE TABLE `links_progress` (
   `link` longtext NOT NULL,
   `hasImage` tinyint NOT NULL DEFAULT '0',
   `completed` tinyint NOT NULL DEFAULT '0',
-  `lastCompleted` datetime NOT NULL,
+  `lastCompleted` datetime NULL,
   `lastMediaDate` varchar(20) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

@@ -7,9 +7,11 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const {getFullLink} = require('./scripts/util/linkUtil');
 let port = process.env.PORT || 3081;
 const app = express();
 const server = http.createServer(app);
+const knex = require('./scripts/lib/knex');
 const io = new Server(server, {
     cors: {
         origin: '*',
@@ -20,33 +22,34 @@ const io = new Server(server, {
 app.use(cors());
 
 
-let scrapeParentLink = 'http://172.16.50.14';
+
 const scrapeWebsite = async (url) => {
     try {
         // Fetch the HTML from the URL
         let currentUrl = ""+url;
-        if(!currentUrl.includes("http")){
-            if(currentUrl.startsWith("/")){
-                currentUrl = scrapeParentLink + currentUrl;
-            }else{
-                currentUrl = scrapeParentLink + "/" + currentUrl;
-            }
-        }
+        currentUrl = getFullLink(currentUrl);
         const { data: html } = await axios.get(currentUrl);
         io.emit("scrapeStarted", { message: "Scraping started" });
         const $ = cheerio.load(html);
 
         let body = $("html").find("tr")
-        body.each((i, el) => {
+        body.each(async(i, el) => {
             let test = $(el).find("a")
             let href = test.attr("href")
             let date = $(el).find("td.fb-d")
             if (test.html() != null && href != "..") {
+                href = getFullLink(href);
                 let scrappedRow = {
                     id:i,
                     title: test.html(),
                     link: href,
                     date: date.text()
+                }
+                let existingData = await knex('links_progress').where({ link: href }).first();
+                if(!existingData){
+                    await knex('links_progress').insert({
+                        link: href
+                    })
                 }
                 // Send row data to all connected clients
                 io.emit("scrapedRow", scrappedRow);
