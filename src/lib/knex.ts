@@ -1,7 +1,10 @@
 // Knex instance (shared across the app). We keep a modest connection pool
 // because round settle batches open short-lived transactions; adjust sizing
+
+import { Knex } from "knex";
+
 // for production traffic.
-const knex = require('knex')({
+export const knex:Knex = require('knex')({
   client: 'mysql2',
   connection: {
     host: process.env.DB_HOST,
@@ -13,5 +16,3 @@ const knex = require('knex')({
   },
   pool: { min: 2, max: 10 }
 });
-
-module.exports = knex; // exported singleton

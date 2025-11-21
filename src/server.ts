@@ -1,42 +1,42 @@
 // Load environment variables from .env file
-require('dotenv').config();
-const axios = require('axios');
-const cheerio = require('cheerio');
-const fs = require('fs');
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const cors = require('cors');
-const {getFullLink} = require('./src/util/linkUtil');
-let port = process.env.PORT || 3081;
+import 'dotenv/config';
+import axios from 'axios';
+import * as cheerio from 'cheerio';
+import fs from 'fs';
+import express from 'express';
+import http from 'http';
+import { Server } from 'socket.io';
+import cors from 'cors';
+import { getFullLink } from './util/linkUtil';
+import { knex } from './lib/knex';
+
+const port = process.env.PORT || 3081;
 const app = express();
 const server = http.createServer(app);
-const knex = require('./src/lib/knex');
 const io = new Server(server, {
     cors: {
         origin: '*',
         methods: ['GET', 'POST']
     }
 });
-
 app.use(cors());
 
 
 
-const scrapeWebsite = async (data) => {
+const scrapeWebsite = async (data: { url: string; parent: any[] }) => {
     try {
         // Fetch the HTML from the URL
         let currentUrl = ""+data.url;
         currentUrl = getFullLink(currentUrl);
         const { data: html } = await axios.get(currentUrl);
         const $ = cheerio.load(html);
-        let scrappedData = [];
+        let scrappedData: any[] = [];
         let body = $("html").find("tr")
-        body.each(async(i, el) => {
+        body.each((i: number, el: any) => {
             let test = $(el).find("a")
             let href = test.attr("href")
             let date = $(el).find("td.fb-d")
-            if (test.html() != null && href != "..") {
+            if (test.html() != null && href && href != "..") {
                 href = getFullLink(href);
                 let scrappedRow = {
                     id:i,
@@ -45,12 +45,12 @@ const scrapeWebsite = async (data) => {
                     date: date.text(),
                     parentLink: currentUrl
                 }
-                let existingData = await knex('links_progress').where({ link: href }).first();
-                if(!existingData){
-                    await knex('links_progress').insert({
-                        link: href
-                    })
-                }
+                // Check and insert in background (non-blocking)
+                knex('links_progress').where({ link: href }).first().then((existingData: any) => {
+                    if(!existingData){
+                        knex('links_progress').insert({ link: href }).catch(console.error);
+                    }
+                });
                 scrappedData.push(scrappedRow);
                 // Send row data to all connected clients
                 
@@ -58,23 +58,23 @@ const scrapeWebsite = async (data) => {
             }
         })
         io.emit("scrapedRow", scrappedData);
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error scraping:', error.message);
         io.emit("scrapeError", { message: "Error occurred during scraping" });
     }
 };
 
 // scrapeWebsite('http://172.16.50.12/DHAKA-FLIX-12/TV-WEB-Series/TV%20Series%20%E2%99%A5%20%20A%20%20%E2%80%94%20%20L/');
-io.on('connection', (socket) => {
+io.on('connection', (socket: any) => {
     console.log('a user connected');
     socket.on('disconnect', () => {
         console.log('user disconnected');
     });
-    socket.on('scrap', (url) => {
+    socket.on('scrap', (url: string) => {
         console.log('scraping', url);
         scrapeWebsite({url,parent:[]});
     });
-    socket.on('testData', (data) => {
+    socket.on('testData', (data: any) => {
         console.log(data)
     })
 })

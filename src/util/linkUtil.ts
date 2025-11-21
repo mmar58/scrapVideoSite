@@ -1,5 +1,5 @@
 const scrapeParentLink = 'http://172.16.50.14';
-function getFullLink(href) {
+export function getFullLink(href: string): string {
     if(!href.includes("http")){
             if(href.startsWith("/")){
                 href = scrapeParentLink + href;
@@ -9,4 +9,3 @@ function getFullLink(href) {
         }
     return href;
 }
-module.exports = { getFullLink };
