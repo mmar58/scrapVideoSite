@@ -43,7 +43,8 @@ const scrapeWebsite = async (url) => {
                     id:i,
                     title: test.html(),
                     link: href,
-                    date: date.text()
+                    date: date.text(),
+                    parentLink: currentUrl
                 }
                 let existingData = await knex('links_progress').where({ link: href }).first();
                 if(!existingData){
