@@ -23,15 +23,14 @@ app.use(cors());
 
 
 
-const scrapeWebsite = async (url) => {
+const scrapeWebsite = async (data) => {
     try {
         // Fetch the HTML from the URL
-        let currentUrl = ""+url;
+        let currentUrl = ""+data.url;
         currentUrl = getFullLink(currentUrl);
         const { data: html } = await axios.get(currentUrl);
-        io.emit("scrapeStarted", { message: "Scraping started" });
         const $ = cheerio.load(html);
-
+        let scrappedData = [];
         let body = $("html").find("tr")
         body.each(async(i, el) => {
             let test = $(el).find("a")
@@ -52,12 +51,13 @@ const scrapeWebsite = async (url) => {
                         link: href
                     })
                 }
+                scrappedData.push(scrappedRow);
                 // Send row data to all connected clients
-                io.emit("scrapedRow", scrappedRow);
+                
                 // console.log(i,scrappedRow);
             }
         })
-        io.emit("scrapeCompleted", { message: "Scraping completed" });
+        io.emit("scrapedRow", scrappedData);
     } catch (error) {
         console.error('Error scraping:', error.message);
         io.emit("scrapeError", { message: "Error occurred during scraping" });
@@ -72,7 +72,7 @@ io.on('connection', (socket) => {
     });
     socket.on('scrap', (url) => {
         console.log('scraping', url);
-        scrapeWebsite(url);
+        scrapeWebsite({url,parent:[]});
     });
     socket.on('testData', (data) => {
         console.log(data)
