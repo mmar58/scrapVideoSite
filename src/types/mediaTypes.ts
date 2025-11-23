@@ -3,6 +3,7 @@ export interface MediaCategory {
 	title: string;
 	icon?: string;
     imageUrl?: string;
+    itemCount?: number;
 	description?: string;
 	color?: string;
 	link?: string;
