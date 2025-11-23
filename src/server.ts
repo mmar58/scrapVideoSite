@@ -53,6 +53,7 @@ const scrapeWebsite = async (data: scrapLink) => {
                         knex('links_progress').insert({ link: href }).catch(console.error);
                     }
                 });
+                listOfLinksToScrap.push({url:href,parent: [...data.parent, currentUrl]});
                 scrappedData.push(scrappedRow);
                 // Send row data to all connected clients
                 
@@ -60,6 +61,9 @@ const scrapeWebsite = async (data: scrapLink) => {
             }
         })
         io.emit("scrapedRow", scrappedData);
+        for (const element of listOfLinksToScrap) {
+            await scrapeWebsite(element);
+        }
     } catch (error: any) {
         console.error('Error scraping:', error.message);
         io.emit("scrapeError", { message: "Error occurred during scraping" });
