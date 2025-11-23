@@ -9,7 +9,8 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import { getFullLink } from './util/linkUtil';
 import { knex } from './lib/knex';
-
+import { scrapLink } from './types/dataTypes';
+import { MediaCategory } from './types/mediaTypes';
 const port = process.env.PORT || 3081;
 const app = express();
 const server = http.createServer(app);
@@ -23,14 +24,14 @@ app.use(cors());
 
 
 
-const scrapeWebsite = async (data: { url: string; parent: any[] }) => {
+const scrapeWebsite = async (data: scrapLink) => {
     try {
         // Fetch the HTML from the URL
         let currentUrl = ""+data.url;
         currentUrl = getFullLink(currentUrl);
         const { data: html } = await axios.get(currentUrl);
         const $ = cheerio.load(html);
-        let scrappedData: any[] = [];
+        let scrappedData: MediaCategory[] = [];
         let body = $("html").find("tr")
         body.each((i: number, el: any) => {
             let test = $(el).find("a")
@@ -38,9 +39,9 @@ const scrapeWebsite = async (data: { url: string; parent: any[] }) => {
             let date = $(el).find("td.fb-d")
             if (test.html() != null && href && href != "..") {
                 href = getFullLink(href);
-                let scrappedRow = {
-                    id:i,
-                    title: test.html(),
+                let scrappedRow:MediaCategory = {
+                    id:i.toString(),
+                    title: test.html() || "",
                     link: href,
                     date: date.text(),
                     parentLink: currentUrl
