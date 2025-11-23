@@ -32,6 +32,7 @@ const scrapeWebsite = async (data: scrapLink) => {
         const { data: html } = await axios.get(currentUrl);
         const $ = cheerio.load(html);
         let scrappedData: MediaCategory[] = [];
+        let listOfLinksToScrap: scrapLink[] = [];
         let body = $("html").find("tr")
         body.each((i: number, el: any) => {
             let test = $(el).find("a")
