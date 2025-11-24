@@ -1,3 +1,4 @@
+import {LinkType} from "../util/linkUtil";
 export interface MediaCategory {
 	id: string;
 	title: string;
@@ -7,6 +8,7 @@ export interface MediaCategory {
 	description?: string;
 	color?: string;
 	link?: string;
+	linkType?: LinkType;
 	date?: string;
 	parentLink?: string;
 }

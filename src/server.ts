@@ -7,10 +7,11 @@ import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
-import { getFullLink } from './util/linkUtil';
+import { detectLinkType, getFullLink } from './util/linkUtil';
 import { knex } from './lib/knex';
 import { scrapLink } from './types/dataTypes';
 import { MediaCategory } from './types/mediaTypes';
+import { isIncludeLinkInMedia } from './util/helper';
 const port = process.env.PORT || 3081;
 const app = express();
 const server = http.createServer(app);
@@ -21,43 +22,65 @@ const io = new Server(server, {
     }
 });
 app.use(cors());
-
+let rootLinks: MediaCategory[] = [];
 
 
 const scrapeWebsite = async (data: scrapLink) => {
     try {
+        if (data.parent.length > 0 && !isIncludeLinkInMedia(data.parent[0], rootLinks)) {
+            console.log("Doesn't include parent in the root link:", data.url);
+            return;
+        }
         // Fetch the HTML from the URL
-        let currentUrl = ""+data.url;
+        let currentUrl = "" + data.url;
         currentUrl = getFullLink(currentUrl);
         const { data: html } = await axios.get(currentUrl);
         const $ = cheerio.load(html);
         let scrappedData: MediaCategory[] = [];
         let listOfLinksToScrap: scrapLink[] = [];
         let body = $("html").find("tr")
+        let currentImageLink = "";
         body.each((i: number, el: any) => {
             let test = $(el).find("a")
             let href = test.attr("href")
             let date = $(el).find("td.fb-d")
             if (test.html() != null && href && href != "..") {
                 href = getFullLink(href);
-                let scrappedRow:MediaCategory = {
-                    id:i.toString(),
-                    title: test.html() || "",
-                    link: href,
-                    date: date.text(),
-                    parentLink: currentUrl
+                let linkType = detectLinkType(href);
+                // Skip image links
+                if (linkType === 'image') {
+                    currentImageLink = href;
                 }
-                // Check and insert in background (non-blocking)
-                knex('links_progress').where({ link: href }).first().then((existingData: any) => {
-                    if(!existingData){
-                        knex('links_progress').insert({ link: href }).catch(console.error);
+                // Prepare scrapped row
+                else {
+                    let scrappedRow: MediaCategory = {
+                        id: i.toString(),
+                        title: test.html() || "",
+                        link: href,
+                        date: date.text(),
+                        linkType: linkType,
+                        parentLink: currentUrl
                     }
-                });
-                listOfLinksToScrap.push({url:href,parent: [...data.parent, currentUrl]});
-                scrappedData.push(scrappedRow);
-                // Send row data to all connected clients
-                
-                // console.log(i,scrappedRow);
+                    if (data.parent.length === 0 && !isIncludeLinkInMedia(href, rootLinks)) {
+                        rootLinks.push(
+                            { id: rootLinks.length.toString(), link: href, linkType, parentLink: currentUrl, title: test.html() || "" }
+                        );
+                    }
+                    if (linkType !== 'link' && data.parent.length > 0) {
+                        
+                        if (isIncludeLinkInMedia(data.parent[0], rootLinks)) {
+                            
+                        }
+                    }
+                    listOfLinksToScrap.push({ url: href, parent: [...data.parent, currentUrl] });
+                    scrappedData.push(scrappedRow);
+                    // Check and insert in background (non-blocking)
+                    knex('links_progress').where({ link: href }).first().then((existingData: any) => {
+                        if (!existingData) {
+                            knex('links_progress').insert({ link: href }).catch(console.error);
+                        }
+                    });
+                }
             }
         })
         io.emit("scrapedRow", scrappedData);
@@ -78,7 +101,8 @@ io.on('connection', (socket: any) => {
     });
     socket.on('scrap', (url: string) => {
         console.log('scraping', url);
-        scrapeWebsite({url,parent:[]});
+        rootLinks = [];
+        scrapeWebsite({ url, parent: [] });
     });
     socket.on('testData', (data: any) => {
         console.log(data)
