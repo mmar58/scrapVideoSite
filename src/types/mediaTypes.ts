@@ -4,7 +4,7 @@ export interface MediaCategory {
 	title: string;
 	icon?: string;
     imageUrl?: string;
-    itemCount?: number;
+    filesCount?: number;
 	description?: string;
 	color?: string;
 	link?: string;

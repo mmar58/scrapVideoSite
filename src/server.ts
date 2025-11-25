@@ -78,11 +78,11 @@ const scrapeWebsite = async (data: scrapLink) => {
 
                         if(targetMedia){
                             // console.log('Updating item count for media:', targetMedia);
-                            if(targetMedia.itemCount){
-                                targetMedia.itemCount += 1;
+                            if(targetMedia.filesCount){
+                                targetMedia.filesCount += 1;
                             }
                             else {
-                                targetMedia.itemCount = 1;
+                                targetMedia.filesCount = 1;
                             }
                         }
                         else{
