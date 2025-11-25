@@ -2,7 +2,6 @@
 import 'dotenv/config';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import fs from 'fs';
 import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
@@ -27,7 +26,9 @@ let rootLinks: MediaCategory[] = [];
 
 const scrapeWebsite = async (data: scrapLink) => {
     try {
+        console.log('scraping', data.url);
         if (data.parent.length > 0 && !isIncludeLinkInMedia(data.parent[0], rootLinks)) {
+            io.emit("scrapeError", { message: "Parent link not found in root links", parentLink: data.parent[0],rootLinks });
             console.log("Doesn't include parent in the root link:", data.url);
             return;
         }
@@ -49,7 +50,7 @@ const scrapeWebsite = async (data: scrapLink) => {
                 let linkType = detectLinkType(href);
                 // Skip image links
                 if (linkType === 'image') {
-                    currentImageLink = href;
+                    currentImageLink = getFullLink(href);
                 }
                 // Prepare scrapped row
                 else {
@@ -67,12 +68,30 @@ const scrapeWebsite = async (data: scrapLink) => {
                         );
                     }
                     if (linkType !== 'link' && data.parent.length > 0) {
-                        
-                        if (isIncludeLinkInMedia(data.parent[0], rootLinks)) {
-                            
+                        let targetMedia:MediaCategory|null = null
+                        if(data.parent.length > 1){
+                            targetMedia = rootLinks.find((media) => media.link==data.url||media.link === data.parent[1])||null;
+                        }
+                        else{
+                            targetMedia = rootLinks.find((media) => media.link === data.url)||null;
+                        }
+
+                        if(targetMedia){
+                            // console.log('Updating item count for media:', targetMedia);
+                            if(targetMedia.itemCount){
+                                targetMedia.itemCount += 1;
+                            }
+                            else {
+                                targetMedia.itemCount = 1;
+                            }
+                        }
+                        else{
+                            console.log('Target media not found for link:',data);
                         }
                     }
-                    listOfLinksToScrap.push({ url: href, parent: [...data.parent, currentUrl] });
+                    if(linkType === 'link'){
+                        listOfLinksToScrap.push({ url: href, parent: [...data.parent, currentUrl] });
+                    }
                     scrappedData.push(scrappedRow);
                     // Check and insert in background (non-blocking)
                     knex('links_progress').where({ link: href }).first().then((existingData: any) => {
@@ -83,9 +102,30 @@ const scrapeWebsite = async (data: scrapLink) => {
                 }
             }
         })
-        io.emit("scrapedRow", scrappedData);
+        // If image link found, associate it with the last scrapped data
+        if(currentImageLink != ""){
+            // console.log('Associating image link:', currentImageLink);
+            if(data.parent.length == 0){
+                rootLinks.forEach(element => {
+                    element.imageUrl = currentImageLink;
+                });
+            }
+            if(data.parent.length == 1){
+                let targetMedia = rootLinks.find((media) => media.link === data.url);
+                if(targetMedia){
+                    targetMedia.imageUrl = currentImageLink;
+                }
+            }
+            else{
+                let targetMedia = rootLinks.find((media) => media.link === data.url || media.link === data.parent[1]);
+                if(targetMedia){
+                    targetMedia.imageUrl = currentImageLink;
+                }
+            }
+        }
+        io.emit("scrapedRow", rootLinks);
         for (const element of listOfLinksToScrap) {
-            await scrapeWebsite(element);
+            scrapeWebsite(element);
         }
     } catch (error: any) {
         console.error('Error scraping:', error.message);
