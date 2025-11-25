@@ -55,7 +55,7 @@ const scrapeWebsite = async (data: scrapLink) => {
                 // Prepare scrapped row
                 else {
                     let scrappedRow: MediaCategory = {
-                        id: i.toString(),
+                        id: rootLinks.length.toString(),
                         title: test.html() || "",
                         link: href,
                         date: date.text(),
@@ -64,7 +64,7 @@ const scrapeWebsite = async (data: scrapLink) => {
                     }
                     if (data.parent.length === 0 && !isIncludeLinkInMedia(href, rootLinks)) {
                         rootLinks.push(
-                            { id: rootLinks.length.toString(), link: href, linkType, parentLink: currentUrl, title: test.html() || "" }
+                            scrappedRow
                         );
                     }
                     if (linkType !== 'link' && data.parent.length > 0) {
@@ -93,12 +93,6 @@ const scrapeWebsite = async (data: scrapLink) => {
                         listOfLinksToScrap.push({ url: href, parent: [...data.parent, currentUrl] });
                     }
                     scrappedData.push(scrappedRow);
-                    // Check and insert in background (non-blocking)
-                    knex('links_progress').where({ link: href }).first().then((existingData: any) => {
-                        if (!existingData) {
-                            knex('links_progress').insert({ link: href }).catch(console.error);
-                        }
-                    });
                 }
             }
         })
