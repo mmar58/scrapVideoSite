@@ -11,7 +11,8 @@ DROP TABLE IF EXISTS `links_progress`;
 CREATE TABLE `links_progress` (
   `id` int NOT NULL AUTO_INCREMENT,
   `link` longtext NOT NULL,
-  `hasImage` tinyint NOT NULL DEFAULT '0',
+  `imageUrl` longtext DEFAULT NULL,
+  `filesCount` int NOT NULL DEFAULT '0',
   `completed` tinyint NOT NULL DEFAULT '0',
   `lastCompleted` datetime NULL,
   `lastMediaDate` varchar(20) DEFAULT NULL,
