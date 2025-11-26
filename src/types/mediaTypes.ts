@@ -8,6 +8,8 @@ export interface MediaCategory {
 	description?: string;
 	color?: string;
 	link?: string;
+	completed?: number;
+	parentId?: string;
 	linkType?: LinkType;
 	date?: string;
 	parentLink?: string;

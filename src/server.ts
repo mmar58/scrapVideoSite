@@ -11,6 +11,7 @@ import { knex } from './lib/knex';
 import { scrapLink } from './types/dataTypes';
 import { MediaCategory } from './types/mediaTypes';
 import { isIncludeLinkInMedia } from './util/helper';
+import { link } from 'fs';
 const port = process.env.PORT || 3081;
 const app = express();
 const server = http.createServer(app);
@@ -35,6 +36,15 @@ const scrapeWebsite = async (data: scrapLink) => {
         // Fetch the HTML from the URL
         let currentUrl = "" + data.url;
         currentUrl = getFullLink(currentUrl);
+        if(data.parentScrapCompleted){
+            let subLinks = await knex<MediaCategory>("links").where("parentId", data.id || -999);
+            subLinks.forEach((subLink) => {
+                if(!subLink.linkType){
+                    io.emit("scrapeError", { source:"Parent Scrap completed", message: "Link type missing in database", link: subLink });
+                }
+                
+            });
+        }
         const { data: html } = await axios.get(currentUrl);
         const $ = cheerio.load(html);
         let scrappedData: MediaCategory[] = [];
